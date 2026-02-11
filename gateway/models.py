@@ -22,10 +22,10 @@ class ModelConfig(BaseModel):
     model: str = Field(..., description="Path to model directory or GGUF file, e.g., /models/gpt-oss or /models/model.gguf")
     backend: BackendType = Field(..., description="Backend to use: vllm, transformers, or llamacpp")
     device: DeviceType = Field(..., description="Device to run on: cuda or cpu")
-    gpu_memory_utilization: float = Field(default=0.7, ge=0.1, le=1.0, description="GPU memory utilization (vLLM only)")
+    gpu_memory_utilization: float = Field(default=0.4, ge=0.1, le=1.0, description="GPU memory utilization (vLLM only)")
     ttl: int = Field(default=300, ge=0, description="Time-to-live in seconds, 0 = no expiry")
     n_gpu_layers: int = Field(default=-1, description="Number of layers to offload to GPU (llama.cpp only, -1 = all)")
-    n_ctx: int = Field(default=2048, description="Context window size (llama.cpp only)")
+    n_ctx: int = Field(default=4096, description="Context window size (llama.cpp only)")
     max_model_len: Optional[int] = Field(default=None, description="Maximum model context length (vLLM only)")
     
     @validator('backend')
@@ -53,10 +53,10 @@ class ChatCompletionRequest(BaseModel):
     model: str = Field(..., description="Path to model directory or GGUF file")
     backend: BackendType = Field(..., description="Backend: vllm, transformers, or llamacpp")
     device: DeviceType = Field(..., description="Device: cuda or cpu")
-    gpu_memory_utilization: Optional[float] = Field(default=0.7, ge=0.1, le=1.0)
+    gpu_memory_utilization: Optional[float] = Field(default=0.4, ge=0.1, le=1.0)
     ttl: Optional[int] = Field(default=300, ge=0)
     n_gpu_layers: Optional[int] = Field(default=-1, description="GPU layers for llama.cpp")
-    n_ctx: Optional[int] = Field(default=2048, description="Context size for llama.cpp")
+    n_ctx: Optional[int] = Field(default=4096, description="Context size for llama.cpp")
     max_model_len: Optional[int] = Field(default=None, description="Max context length for vLLM")
     
     # OpenAI parameters

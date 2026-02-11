@@ -1,18 +1,23 @@
-FROM pytorch/pytorch:2.5.1-cuda12.1-cudnn9-runtime
+FROM nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
+
+# Install Python 3.10
+RUN apt-get update && apt-get install -y \
+    python3.10 \
+    python3-pip \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    git \
-    && rm -rf /var/lib/apt/lists/*
-
 # Copy requirements
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install PyTorch with full CUDA support (includes all compute capabilities)
+RUN pip3 install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+# Install other Python dependencies
+RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Copy worker code
 COPY transformers_worker.py .
@@ -25,4 +30,4 @@ ENV ENGINE_TYPE=transformers
 ENV PORT=8000
 
 # Run the worker
-CMD ["python", "transformers_worker.py"]
+CMD ["python3", "transformers_worker.py"]

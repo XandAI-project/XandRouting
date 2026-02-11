@@ -27,7 +27,7 @@ class LoadModelRequest(BaseModel):
     """Request to load a model"""
     model_path: str = Field(..., description="Path to GGUF model file")
     n_gpu_layers: int = Field(default=-1, description="Number of layers to offload to GPU (-1 = all)")
-    n_ctx: int = Field(default=2048, description="Context window size")
+    n_ctx: int = Field(default=4096, description="Context window size")
     ttl: int = Field(default=300, ge=0, description="Time-to-live in seconds")
 
 
@@ -53,7 +53,7 @@ class ChatCompletionRequest(BaseModel):
     stop: Optional[List[str]] = None
     # llama.cpp-specific parameters
     n_gpu_layers: Optional[int] = Field(default=-1, description="GPU layers to offload")
-    n_ctx: Optional[int] = Field(default=2048, description="Context window size")
+    n_ctx: Optional[int] = Field(default=4096, description="Context window size")
     ttl: Optional[int] = Field(default=300, ge=0)
 
 
@@ -79,7 +79,7 @@ def messages_to_prompt(messages: List[Dict[str, str]]) -> str:
 async def load_model_if_needed(
     model_path: str,
     n_gpu_layers: int = -1,
-    n_ctx: int = 2048,
+    n_ctx: int = 4096,
     ttl: int = 300
 ) -> Any:
     """Load model with llama.cpp if not already loaded"""
@@ -100,6 +100,7 @@ async def load_model_if_needed(
             model_path=model_path,
             n_gpu_layers=n_gpu_layers,
             n_ctx=n_ctx,
+            n_batch=512,  # Control memory usage during processing
             verbose=False
         )
         
@@ -249,7 +250,7 @@ async def chat_completions(request: ChatCompletionRequest):
         llm = await load_model_if_needed(
             model_path=request.model,
             n_gpu_layers=request.n_gpu_layers or -1,
-            n_ctx=request.n_ctx or 2048,
+            n_ctx=request.n_ctx or 4096,
             ttl=request.ttl or 300
         )
         
