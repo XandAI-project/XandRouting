@@ -26,6 +26,7 @@ class ModelConfig(BaseModel):
     ttl: int = Field(default=300, ge=0, description="Time-to-live in seconds, 0 = no expiry")
     n_gpu_layers: int = Field(default=-1, description="Number of layers to offload to GPU (llama.cpp only, -1 = all)")
     n_ctx: int = Field(default=2048, description="Context window size (llama.cpp only)")
+    max_model_len: Optional[int] = Field(default=None, description="Maximum model context length (vLLM only)")
     
     @validator('backend')
     def validate_backend(cls, v):
@@ -56,6 +57,7 @@ class ChatCompletionRequest(BaseModel):
     ttl: Optional[int] = Field(default=300, ge=0)
     n_gpu_layers: Optional[int] = Field(default=-1, description="GPU layers for llama.cpp")
     n_ctx: Optional[int] = Field(default=2048, description="Context size for llama.cpp")
+    max_model_len: Optional[int] = Field(default=None, description="Max context length for vLLM")
     
     # OpenAI parameters
     messages: list = Field(..., description="Array of message objects")

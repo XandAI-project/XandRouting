@@ -87,15 +87,23 @@ class ModelLoader:
         
         self.logger.info(f"Initializing vLLM with gpu_memory_utilization={config.gpu_memory_utilization}")
         
+        # Build vLLM parameters
+        vllm_params = {
+            "model": config.model,
+            "tensor_parallel_size": 1,
+            "gpu_memory_utilization": config.gpu_memory_utilization,
+            "trust_remote_code": True,
+            "download_dir": None,
+            "dtype": "auto"
+        }
+        
+        # Add max_model_len if specified to bypass rope_scaling validation
+        if config.max_model_len is not None:
+            vllm_params["max_model_len"] = config.max_model_len
+            self.logger.info(f"Using explicit max_model_len: {config.max_model_len}")
+        
         # Load model with vLLM
-        llm = LLM(
-            model=config.model,
-            tensor_parallel_size=1,
-            gpu_memory_utilization=config.gpu_memory_utilization,
-            trust_remote_code=True,
-            download_dir=None,  # Use model path directly
-            dtype="auto"
-        )
+        llm = LLM(**vllm_params)
         
         self.logger.info(f"Successfully loaded vLLM model: {config.model}")
         
