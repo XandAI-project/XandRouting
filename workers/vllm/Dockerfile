@@ -20,5 +20,6 @@ ENV ENGINE_TYPE=vllm
 ENV PORT=8000
 ENV CUDA_VISIBLE_DEVICES=0
 
-# Run the worker
-CMD ["python", "vllm_worker.py"]
+# Override the vLLM base image entrypoint to run our custom worker
+ENTRYPOINT []
+CMD ["python3", "vllm_worker.py"]
