@@ -11,39 +11,50 @@ from typing import List, Dict
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Transformers CPU Worker")
+app = FastAPI(title="Transformers Worker")
 
 # Global model and tokenizer
 model = None
 tokenizer = None
 model_name = None
+device = None
 
-def load_model(model_path: str):
-    """Load model and tokenizer from disk (CPU only)"""
-    global model, tokenizer, model_name
+def load_model(model_path: str, target_device: str = "cpu"):
+    """Load model and tokenizer from disk"""
+    global model, tokenizer, model_name, device
     
-    logger.info(f"Loading model from {model_path} on CPU...")
+    device = target_device
+    logger.info(f"Loading model from {model_path} on {device.upper()}...")
     start_time = time.time()
     
     try:
         # Load tokenizer
         tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
         
-        # Load model on CPU with float32
+        # Determine dtype based on device
+        if device == "cuda":
+            torch_dtype = torch.float16  # Use FP16 for GPU to save memory
+        else:
+            torch_dtype = torch.float32  # Use FP32 for CPU
+        
+        # Load model without device_map (no accelerate dependency)
         model = AutoModelForCausalLM.from_pretrained(
             model_path,
-            torch_dtype=torch.float32,
-            device_map="cpu",
+            torch_dtype=torch_dtype,
             local_files_only=True,
             low_cpu_mem_usage=True
         )
+        
+        # Move model to target device
+        model = model.to(device)
         
         model_name = model_path.split("/")[-1]
         
         elapsed = time.time() - start_time
         logger.info(f"Model loaded successfully in {elapsed:.2f}s")
         logger.info(f"Model: {model_name}")
-        logger.info(f"Device: CPU")
+        logger.info(f"Device: {device.upper()}")
+        logger.info(f"Dtype: {torch_dtype}")
         
     except Exception as e:
         logger.error(f"Failed to load model: {e}")
@@ -119,13 +130,14 @@ async def chat_completions(request: Request):
         prompt = messages_to_prompt(messages)
         logger.info(f"Generating response for prompt (length: {len(prompt)})")
         
-        # Tokenize input
+        # Tokenize input and move to device
         inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=2048)
+        inputs = {k: v.to(device) for k, v in inputs.items()}
         
         # Generate response
         with torch.no_grad():
             outputs = model.generate(
-                inputs.input_ids,
+                inputs["input_ids"],
                 max_new_tokens=max_tokens,
                 temperature=temperature,
                 do_sample=temperature > 0,
@@ -155,8 +167,8 @@ async def chat_completions(request: Request):
                 }
             ],
             "usage": {
-                "prompt_tokens": inputs.input_ids.shape[1],
-                "completion_tokens": outputs.shape[1] - inputs.input_ids.shape[1],
+                "prompt_tokens": inputs["input_ids"].shape[1],
+                "completion_tokens": outputs.shape[1] - inputs["input_ids"].shape[1],
                 "total_tokens": outputs.shape[1]
             }
         }
@@ -178,13 +190,14 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-path", type=str, required=True, help="Path to model directory")
+    parser.add_argument("--device", type=str, default="cpu", choices=["cpu", "cuda"], help="Device to use")
     parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to bind to")
     parser.add_argument("--port", type=int, default=8000, help="Port to bind to")
     
     args = parser.parse_args()
     
     # Load model at startup
-    load_model(args.model_path)
+    load_model(args.model_path, args.device)
     
     # Start server
     uvicorn.run(app, host=args.host, port=args.port)

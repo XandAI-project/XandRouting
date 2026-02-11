@@ -202,7 +202,8 @@ async def list_loaded_models():
     all_loaded_models = []
     
     # Query each engine for loaded models
-    for backend in [request.backend.VLLM, request.backend.TRANSFORMERS, request.backend.LLAMACPP]:
+    from models import BackendType
+    for backend in [BackendType.VLLM, BackendType.TRANSFORMERS, BackendType.LLAMACPP]:
         try:
             response = await engine_router.proxy_request(
                 backend=backend,
@@ -271,7 +272,8 @@ async def unload_model(request: UnloadModelRequest):
         else:
             # Unload from all backends
             results = []
-            for backend in [request.backend.VLLM, request.backend.TRANSFORMERS, request.backend.LLAMACPP]:
+            from models import BackendType
+            for backend in [BackendType.VLLM, BackendType.TRANSFORMERS, BackendType.LLAMACPP]:
                 try:
                     response = await engine_router.proxy_request(
                         backend=backend,
