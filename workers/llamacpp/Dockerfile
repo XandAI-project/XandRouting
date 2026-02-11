@@ -27,8 +27,8 @@ WORKDIR /app
 # Copy requirements
 COPY requirements.txt .
 
-# Install llama-cpp-python with CUDA support
-RUN CMAKE_ARGS="-DLLAMA_CUBLAS=on" pip install --no-cache-dir llama-cpp-python>=0.3.0
+# Install llama-cpp-python with CUDA support (using new GGML_CUDA flag)
+RUN CMAKE_ARGS="-DGGML_CUDA=on" pip install --no-cache-dir llama-cpp-python>=0.3.0
 
 # Install other dependencies
 RUN pip install --no-cache-dir fastapi uvicorn[standard] pydantic httpx
