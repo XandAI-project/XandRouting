@@ -103,7 +103,8 @@ async def chat_completions(request: ChatCompletionRequest):
             gpu_memory_utilization=request.gpu_memory_utilization,
             ttl=request.ttl,
             n_gpu_layers=request.n_gpu_layers if request.backend == "llamacpp" else -1,
-            n_ctx=request.n_ctx if request.backend == "llamacpp" else 2048
+            n_ctx=request.n_ctx if request.backend == "llamacpp" else 2048,
+            max_model_len=request.max_model_len
         )
         
         logger.info(f"Request for model: {config.model} ({config.backend.value} on {config.device.value}, stream={request.stream})")
