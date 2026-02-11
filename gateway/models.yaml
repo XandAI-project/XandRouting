@@ -1,0 +1,17 @@
+models:
+  llama3-8b-cuda:
+    backend: vllm
+    device: cuda
+    url: http://llama3-cuda:8000
+    gpu_memory_utilization: 0.9
+    
+  mistral-7b-offload:
+    backend: vllm
+    device: cuda+ram
+    url: http://mistral-offload:8000
+    gpu_memory_utilization: 0.5
+    
+  qwen2-7b-cpu:
+    backend: transformers
+    device: cpu
+    url: http://qwen-cpu:8000

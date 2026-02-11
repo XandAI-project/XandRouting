@@ -1,0 +1,12 @@
+# Requirements without llama-cpp-python (for faster build)
+# Use this temporarily if you only need vLLM or Transformers
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.0
+httpx==0.26.0
+vllm==0.3.0
+transformers>=4.37.0
+torch>=2.1.2
+accelerate>=0.25.0
+sentencepiece>=0.1.99
+protobuf>=4.25.1

@@ -1,0 +1,2 @@
+# This file ensures the models directory is tracked by git
+# while ignoring all model files (which are typically very large)

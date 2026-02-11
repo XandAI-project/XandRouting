@@ -1,0 +1,916 @@
+{
+	"info": {
+		"_postman_id": "dynamic-llm-api-001",
+		"name": "Dynamic LLM API",
+		"description": "Complete API collection for Dynamic Multi-Model LLM Inference API\n\nFeatures:\n- Dynamic model loading (vLLM, Transformers, llama.cpp)\n- TTL-based caching\n- Exclusive mode\n- OpenAI-compatible endpoints",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health & Status",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://192.168.0.5:8080/health",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"health"
+							]
+						},
+						"description": "Simple health check endpoint"
+					},
+					"response": []
+				},
+				{
+					"name": "Root Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://192.168.0.5:8080/",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								""
+							]
+						},
+						"description": "Get API status and loaded models count"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Chat Completions",
+			"item": [
+				{
+					"name": "vLLM - CUDA (GPU Full)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/your-model\",\n  \"backend\": \"vllm\",\n  \"device\": \"cuda\",\n  \"gpu_memory_utilization\": 0.9,\n  \"ttl\": 600,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a helpful AI assistant.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Explain quantum computing in simple terms.\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 200\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/chat/completions",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"chat",
+								"completions"
+							]
+						},
+						"description": "Run model with vLLM backend on full GPU (0.9 utilization)"
+					},
+					"response": []
+				},
+				{
+					"name": "vLLM - CUDA (RAM Offload)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/your-model\",\n  \"backend\": \"vllm\",\n  \"device\": \"cuda\",\n  \"gpu_memory_utilization\": 0.5,\n  \"ttl\": 600,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Write a Python function to calculate fibonacci numbers.\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 300\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/chat/completions",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"chat",
+								"completions"
+							]
+						},
+						"description": "Run with vLLM using 50% GPU, 50% RAM offload (for large models)"
+					},
+					"response": []
+				},
+				{
+					"name": "Transformers - CUDA",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/your-model\",\n  \"backend\": \"transformers\",\n  \"device\": \"cuda\",\n  \"ttl\": 300,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"What is machine learning?\"\n    }\n  ],\n  \"temperature\": 0.8,\n  \"max_tokens\": 150\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/chat/completions",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"chat",
+								"completions"
+							]
+						},
+						"description": "Run with Transformers backend on GPU"
+					},
+					"response": []
+				},
+				{
+					"name": "Transformers - CPU",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/your-model\",\n  \"backend\": \"transformers\",\n  \"device\": \"cpu\",\n  \"ttl\": 300,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Say hello in one sentence.\"\n    }\n  ],\n  \"max_tokens\": 50\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/chat/completions",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"chat",
+								"completions"
+							]
+						},
+						"description": "Run with Transformers on CPU (no GPU needed)"
+					},
+					"response": []
+				},
+				{
+					"name": "llama.cpp - GGUF (Full GPU)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/qwen3-gguf/model.gguf\",\n  \"backend\": \"llamacpp\",\n  \"device\": \"cuda\",\n  \"n_gpu_layers\": -1,\n  \"n_ctx\": 4096,\n  \"ttl\": 600,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Write a Python function to sort a list.\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 500\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/chat/completions",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"chat",
+								"completions"
+							]
+						},
+						"description": "Run GGUF model with llama.cpp, all layers on GPU"
+					},
+					"response": []
+				},
+				{
+					"name": "llama.cpp - GGUF (Partial GPU)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/qwen3-gguf/model.gguf\",\n  \"backend\": \"llamacpp\",\n  \"device\": \"cuda\",\n  \"n_gpu_layers\": 32,\n  \"n_ctx\": 2048,\n  \"ttl\": 600,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Explain recursion.\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 200\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/chat/completions",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"chat",
+								"completions"
+							]
+						},
+						"description": "Run GGUF with partial GPU offload (32 layers on GPU, rest on CPU)"
+					},
+					"response": []
+				},
+				{
+					"name": "llama.cpp - GGUF (CPU Only)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/qwen3-gguf/model.gguf\",\n  \"backend\": \"llamacpp\",\n  \"device\": \"cpu\",\n  \"n_ctx\": 2048,\n  \"ttl\": 300,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Count to 5.\"\n    }\n  ],\n  \"max_tokens\": 50\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/chat/completions",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"chat",
+								"completions"
+							]
+						},
+						"description": "Run GGUF model on CPU only (no GPU)"
+					},
+					"response": []
+				},
+				{
+					"name": "Custom Parameters Example",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/your-model\",\n  \"backend\": \"vllm\",\n  \"device\": \"cuda\",\n  \"gpu_memory_utilization\": 0.7,\n  \"ttl\": 600,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a creative writer.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Write a short poem about AI.\"\n    }\n  ],\n  \"temperature\": 0.9,\n  \"max_tokens\": 200,\n  \"top_p\": 0.95,\n  \"presence_penalty\": 0.5,\n  \"frequency_penalty\": 0.5,\n  \"stop\": [\"\\n\\n\", \"END\"]\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/chat/completions",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"chat",
+								"completions"
+							]
+						},
+						"description": "Example with all OpenAI parameters"
+					},
+					"response": []
+				},
+				{
+					"name": "Streaming - vLLM",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/your-model\",\n  \"backend\": \"vllm\",\n  \"device\": \"cuda\",\n  \"gpu_memory_utilization\": 0.7,\n  \"ttl\": 600,\n  \"stream\": true,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Write a short story about a robot.\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 500\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/chat/completions",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"chat",
+								"completions"
+							]
+						},
+						"description": "Streaming example with vLLM backend - tokens stream as they are generated"
+					},
+					"response": []
+				},
+				{
+					"name": "Streaming - Transformers",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/your-model\",\n  \"backend\": \"transformers\",\n  \"device\": \"cuda\",\n  \"ttl\": 300,\n  \"stream\": true,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Explain how neural networks work in detail.\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 800\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/chat/completions",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"chat",
+								"completions"
+							]
+						},
+						"description": "Streaming example with Transformers backend using TextIteratorStreamer"
+					},
+					"response": []
+				},
+				{
+					"name": "Streaming - llama.cpp GGUF",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/qwen3-gguf/model.gguf\",\n  \"backend\": \"llamacpp\",\n  \"device\": \"cuda\",\n  \"n_gpu_layers\": -1,\n  \"n_ctx\": 4096,\n  \"ttl\": 600,\n  \"stream\": true,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Write a Python tutorial about async programming.\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 1000\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/chat/completions",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"chat",
+								"completions"
+							]
+						},
+						"description": "Streaming example with llama.cpp backend for GGUF models"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Model Management",
+			"item": [
+				{
+					"name": "List Loaded Models",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/models/loaded",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"models",
+								"loaded"
+							]
+						},
+						"description": "List all currently loaded models with TTL information"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Cache Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/models/stats",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"models",
+								"stats"
+							]
+						},
+						"description": "Get cache statistics: hits, misses, memory usage"
+					},
+					"response": []
+				},
+				{
+					"name": "List Model Inventory",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/models/inventory",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"models",
+								"inventory"
+							]
+						},
+						"description": "List all downloaded models in /models/ directory with comprehensive information:\n- Model name and path\n- File details (sizes, types, quantization)\n- Total size in GB\n- Recommended backend(s)\n- Config metadata if available"
+					},
+					"response": []
+				},
+				{
+					"name": "Unload Specific Model",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/your-model\",\n  \"backend\": \"vllm\",\n  \"device\": \"cuda\"\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/models/unload",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"models",
+								"unload"
+							]
+						},
+						"description": "Manually unload a specific model configuration"
+					},
+					"response": []
+				},
+				{
+					"name": "Unload All Configs of a Model",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/your-model\"\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/models/unload",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"models",
+								"unload"
+							]
+						},
+						"description": "Unload all configurations of a specific model"
+					},
+					"response": []
+				},
+				{
+					"name": "Unload All Models",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/models/unload-all",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"models",
+								"unload-all"
+							]
+						},
+						"description": "Unload all currently loaded models"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Model Downloads",
+			"item": [
+				{
+					"name": "Start Download - Full Model",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"url\": \"https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct\",\n  \"destination\": \"qwen3-coder-30b\"\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/models/download",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"models",
+								"download"
+							]
+						},
+						"description": "Start downloading a full model from HuggingFace"
+					},
+					"response": []
+				},
+				{
+					"name": "Start Download - GGUF Only",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"url\": \"https://huggingface.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF\",\n  \"destination\": \"qwen3-gguf\",\n  \"include\": [\"*.gguf\"]\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/models/download",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"models",
+								"download"
+							]
+						},
+						"description": "Download only GGUF files from a model repository"
+					},
+					"response": []
+				},
+				{
+					"name": "Start Download - Specific Quantization",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"url\": \"https://huggingface.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF\",\n  \"destination\": \"qwen3-iq4xs\",\n  \"quantization\": \"IQ4_XS\"\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/models/download",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"models",
+								"download"
+							]
+						},
+						"description": "Download only a specific GGUF quantization"
+					},
+					"response": []
+				},
+				{
+					"name": "Start Download - Exclude Large Files",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"url\": \"https://huggingface.co/meta-llama/Llama-3-8B-Instruct\",\n  \"destination\": \"llama3-8b\",\n  \"exclude\": [\"*.bin\"]\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/models/download",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"models",
+								"download"
+							]
+						},
+						"description": "Download a model but exclude certain file types"
+					},
+					"response": []
+				},
+				{
+					"name": "Poll Download Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/models/download/download_1707576000000",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"models",
+								"download",
+								"download_1707576000000"
+							]
+						},
+						"description": "Check the status of a download job (replace job_id with actual ID)"
+					},
+					"response": []
+				},
+				{
+					"name": "List All Downloads",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/models/download",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"models",
+								"download"
+							]
+						},
+						"description": "List all download jobs and their statuses"
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Download",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/models/download/download_1707576000000",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"models",
+								"download",
+								"download_1707576000000"
+							]
+						},
+						"description": "Cancel a running download job"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Example Workflows",
+			"item": [
+				{
+					"name": "Quick Test - vLLM",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/test-model\",\n  \"backend\": \"vllm\",\n  \"device\": \"cuda\",\n  \"gpu_memory_utilization\": 0.7,\n  \"ttl\": 60,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Say 'Hello World' in one sentence.\"\n    }\n  ],\n  \"max_tokens\": 20\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/chat/completions",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"chat",
+								"completions"
+							]
+						},
+						"description": "Quick test with short TTL and small response"
+					},
+					"response": []
+				},
+				{
+					"name": "Long Context - GGUF",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/qwen3-gguf/model.gguf\",\n  \"backend\": \"llamacpp\",\n  \"device\": \"cuda\",\n  \"n_gpu_layers\": -1,\n  \"n_ctx\": 8192,\n  \"ttl\": 600,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Analyze this long document and provide a summary...\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 1000\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/chat/completions",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"chat",
+								"completions"
+							]
+						},
+						"description": "Example for long context processing (8K context window)"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://192.168.0.5:8080",
+			"type": "string"
+		},
+		{
+			"key": "model_path",
+			"value": "/models/your-model",
+			"type": "string"
+		}
+	]
+}

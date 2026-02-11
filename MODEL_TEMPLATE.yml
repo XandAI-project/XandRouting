@@ -1,0 +1,100 @@
+# Template for adding new models to docker-compose.yml
+# Copy this section and customize for each new model
+
+# ==============================================================
+# GPU Model Template (using vLLM)
+# ==============================================================
+  your-model-name:
+    build:
+      context: ./workers
+      dockerfile: vllm.Dockerfile
+    container_name: your-model-name       # Must match URL in models.yaml
+    command:
+      - "--model"
+      - "/models/your-model-directory"   # Path in the models/ folder
+      - "--served-model-name"
+      - "your-model-name"                 # Name used in API requests
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8000"
+      - "--gpu-memory-utilization"
+      - "0.7"                             # 0.3-0.9, lower = more RAM offload
+    volumes:
+      - ./models:/models:ro
+    networks:
+      - llm-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1                    # Number of GPUs (1, 2, etc.)
+              capabilities: [gpu]
+    restart: unless-stopped
+
+# ==============================================================
+# CPU Model Template (using Transformers)
+# ==============================================================
+  your-model-name-cpu:
+    build:
+      context: ./workers
+      dockerfile: transformers.Dockerfile
+    container_name: your-model-name-cpu   # Must match URL in models.yaml
+    command:
+      - "--model-path"
+      - "/models/your-model-directory"   # Path in the models/ folder
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8000"
+    volumes:
+      - ./models:/models:ro
+    networks:
+      - llm-network
+    restart: unless-stopped
+    # No deploy section needed for CPU-only
+
+# ==============================================================
+# Corresponding models.yaml entry
+# ==============================================================
+# Add this to gateway/models.yaml:
+#
+# models:
+#   your-model-name:            # Name used in API requests
+#     backend: vllm             # 'vllm' for GPU, 'transformers' for CPU
+#     device: cuda              # 'cuda', 'cuda+ram', or 'cpu'
+#     url: http://your-model-name:8000  # Must match container_name
+#     gpu_memory_utilization: 0.7       # Only for vllm backend
+
+# ==============================================================
+# Advanced: Multi-GPU Setup (Tensor Parallelism)
+# ==============================================================
+  large-model-multi-gpu:
+    build:
+      context: ./workers
+      dockerfile: vllm.Dockerfile
+    container_name: large-model-multi-gpu
+    command:
+      - "--model"
+      - "/models/large-model"
+      - "--served-model-name"
+      - "large-model"
+      - "--tensor-parallel-size"
+      - "2"                               # Split across 2 GPUs
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8000"
+    volumes:
+      - ./models:/models:ro
+    networks:
+      - llm-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 2                    # Must match tensor-parallel-size
+              capabilities: [gpu]
+    restart: unless-stopped
