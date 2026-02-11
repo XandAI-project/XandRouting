@@ -1,0 +1,8 @@
+# Base image vllm/vllm-openai:v0.15.1 already includes:
+# - vLLM 0.15.1
+# - FastAPI, uvicorn, pydantic
+# - torch, transformers<5
+# - All core dependencies
+
+# Only additional dependencies needed:
+# (Empty - all dependencies already in base image)
