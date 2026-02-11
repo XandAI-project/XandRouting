@@ -189,6 +189,26 @@ curl -X POST http://localhost:8080/v1/chat/completions \
   }'
 ```
 
+**vLLM with Qwen3-Coder (using max_model_len for mrope models):**
+
+```bash
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "/models/qwen3-coder-30b",
+    "backend": "vllm",
+    "device": "cuda",
+    "gpu_memory_utilization": 0.9,
+    "max_model_len": 32000,
+    "messages": [
+      {"role": "system", "content": "You are an expert programmer."},
+      {"role": "user", "content": "Write a function to reverse a string"}
+    ],
+    "max_tokens": 500,
+    "temperature": 0.7
+  }'
+```
+
 ---
 
 ## API Reference
@@ -235,6 +255,7 @@ OpenAI-compatible chat completions endpoint with dynamic model loading.
 | `ttl` | integer | Optional | 300 | Model cache TTL in seconds |
 | `n_gpu_layers` | integer | Optional | -1 | GPU layers to offload (llama.cpp only, -1 = all) |
 | `n_ctx` | integer | Optional | 2048 | Context window size (llama.cpp only) |
+| `max_model_len` | integer | Optional | None | Maximum context length (vLLM only, bypasses rope_scaling validation) |
 
 **Response (Non-streaming):**
 
@@ -537,6 +558,32 @@ See [EXAMPLES.md](EXAMPLES.md) for comprehensive examples including:
 - Rebuild Docker image: `docker compose build --no-cache`
 - Check gateway container logs: `docker compose logs gateway`
 
+### vLLM rope_scaling AssertionError
+
+**Issue:** `AssertionError: assert "factor" in rope_scaling` when loading Qwen3-Coder or similar models
+
+**Cause:** Some models (Qwen3, Phi-3) use mrope (multi-resolution RoPE) scaling without a "factor" field, which vLLM's validation expects.
+
+**Solution:** Use the `max_model_len` parameter to bypass rope_scaling validation:
+
+```bash
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "/models/qwen3-coder-30b",
+    "backend": "vllm",
+    "device": "cuda",
+    "max_model_len": 32000,
+    "messages": [{"role": "user", "content": "Hello"}],
+    "max_tokens": 100
+  }'
+```
+
+**Recommended values for max_model_len:**
+- Qwen3-Coder-30B: 32000
+- Phi-3: 4096 or 128000 (depending on variant)
+- When unsure, check model's `config.json` for `max_position_embeddings`
+
 ---
 
 ## Architecture Deep Dive
@@ -593,13 +640,6 @@ multi-llm-server/
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
----
-
-## Star History
-
-If you find this project useful, please consider giving it a star!
-
----
 
 ## Support
 

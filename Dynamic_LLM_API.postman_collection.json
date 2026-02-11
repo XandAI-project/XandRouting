@@ -129,6 +129,40 @@
 					"response": []
 				},
 				{
+					"name": "vLLM - Qwen3-Coder (with max_model_len)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/qwen3-coder-30b\",\n  \"backend\": \"vllm\",\n  \"device\": \"cuda\",\n  \"gpu_memory_utilization\": 0.9,\n  \"max_model_len\": 32000,\n  \"ttl\": 600,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an expert programmer.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Write a Python function to implement binary search.\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 500\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/chat/completions",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"chat",
+								"completions"
+							]
+						},
+						"description": "Qwen3-Coder model with max_model_len parameter to bypass mrope rope_scaling validation. Required for models using multi-resolution RoPE without a factor field."
+					},
+					"response": []
+				},
+				{
 					"name": "Transformers - CUDA",
 					"request": {
 						"method": "POST",
