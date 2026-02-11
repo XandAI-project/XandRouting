@@ -13,8 +13,8 @@ WORKDIR /app
 # Copy requirements
 COPY requirements.txt .
 
-# Install PyTorch with full CUDA support (includes all compute capabilities)
-RUN pip3 install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+# Install PyTorch nightly with full CUDA support (includes sm_120 for Blackwell architecture)
+RUN pip3 install --no-cache-dir --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu121
 
 # Install other Python dependencies
 RUN pip3 install --no-cache-dir -r requirements.txt
