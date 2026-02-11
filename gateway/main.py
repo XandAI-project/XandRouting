@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 import logging
 import os
 from typing import Dict, Any
+import httpx
 
 from models import (
     ChatCompletionRequest,
@@ -16,11 +17,11 @@ from models import (
     UnloadModelRequest,
     ModelInventoryResponse
 )
-from model_cache import model_cache
-from inference import inference_engine
 from download_models import DownloadRequest, DownloadJob, DownloadListResponse
 from download_manager import download_manager
 from model_scanner import scan_models_directory
+from engine_router import engine_router
+from cors_config import add_cors_middleware
 
 # Configure logging
 logging.basicConfig(
@@ -31,57 +32,79 @@ logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI(
-    title="Dynamic Multi-Model LLM Inference API",
-    description="Load and run any LLM model dynamically with vLLM or Transformers",
-    version="2.0.0"
+    title="Dynamic Multi-Model LLM Gateway",
+    description="Gateway service that routes requests to backend engine workers (vLLM, Transformers, llama.cpp)",
+    version="2.0.0-microservices"
 )
+
+# Add CORS middleware
+add_cors_middleware(app)
 
 
 @app.on_event("startup")
 async def startup_event():
     """Startup event handler"""
     logger.info("=" * 50)
-    logger.info("Dynamic Multi-Model LLM API Starting")
+    logger.info("Dynamic Multi-Model LLM Gateway Starting")
     logger.info("=" * 50)
+    logger.info("Architecture: Microservices")
     logger.info("Features:")
-    logger.info("  - Dynamic model loading (vLLM + Transformers)")
-    logger.info("  - Automatic TTL-based unloading")
-    logger.info("  - Exclusive mode (same model, different configs)")
-    logger.info("  - OpenAI-compatible API")
+    logger.info("  - HTTP Gateway (request routing)")
+    logger.info("  - vLLM worker service")
+    logger.info("  - Transformers worker service")
+    logger.info("  - llama.cpp worker service")
+    logger.info("  - Model download management")
     logger.info("=" * 50)
+    
+    # Check health of all engines
+    health_status = await engine_router.health_check_all()
+    logger.info("Engine health status:")
+    for backend, status in health_status.items():
+        logger.info(f"  {backend}: {status['status']}")
 
 
 @app.get("/")
 async def root():
     """Health check and status endpoint"""
-    stats = model_cache.get_stats()
+    # Check health of all engines
+    engine_health = await engine_router.health_check_all()
     
     return {
         "status": "online",
         "service": "Dynamic Multi-Model LLM Gateway",
-        "version": "2.0.0",
+        "version": "2.0.0-microservices",
+        "architecture": "microservices",
         "features": [
-            "Dynamic model loading",
-            "vLLM backend support",
-            "Transformers backend support",
-            "TTL-based auto-unload",
-            "Exclusive mode"
+            "HTTP Gateway (request routing)",
+            "vLLM worker service",
+            "Transformers worker service",
+            "llama.cpp worker service",
+            "Model download management",
+            "CORS support"
         ],
-        "loaded_models": model_cache.get_model_count(),
-        "cache_stats": stats
+        "engines": engine_health
     }
 
 
 @app.get("/health")
 async def health():
     """Health check endpoint"""
-    return {"status": "healthy"}
+    # Check health of all engines
+    engine_health = await engine_router.health_check_all()
+    
+    all_healthy = all(status["status"] == "healthy" for status in engine_health.values())
+    
+    return {
+        "status": "healthy" if all_healthy else "degraded",
+        "gateway": "healthy",
+        "engines": engine_health
+    }
 
 
 @app.post("/v1/chat/completions")
 async def chat_completions(request: ChatCompletionRequest):
     """
-    OpenAI-compatible chat completions endpoint with dynamic model loading
+    OpenAI-compatible chat completions endpoint - proxies to backend workers
     
     Supports both streaming and non-streaming responses.
     
@@ -95,51 +118,38 @@ async def chat_completions(request: ChatCompletionRequest):
     - Plus all standard OpenAI parameters
     """
     try:
-        # Create model configuration
-        config = ModelConfig(
-            model=request.model,
-            backend=request.backend,
-            device=request.device,
-            gpu_memory_utilization=request.gpu_memory_utilization,
-            ttl=request.ttl,
-            n_gpu_layers=request.n_gpu_layers if request.backend == "llamacpp" else -1,
-            n_ctx=request.n_ctx if request.backend == "llamacpp" else 2048,
-            max_model_len=request.max_model_len
-        )
+        backend = request.backend
         
-        logger.info(f"Request for model: {config.model} ({config.backend.value} on {config.device.value}, stream={request.stream})")
+        logger.info(f"Routing request to {backend.value} engine: {request.model} (stream={request.stream})")
         
-        # Get or load model (from cache)
-        model_wrapper = await model_cache.get_or_load(config)
-        
-        # Prepare generation parameters
-        gen_params = {
-            "temperature": request.temperature,
-            "max_tokens": request.max_tokens,
-            "top_p": request.top_p,
-            "stop": request.stop,
-            "presence_penalty": request.presence_penalty,
-            "frequency_penalty": request.frequency_penalty
-        }
+        # Prepare request body for worker
+        request_body = request.model_dump()
         
         # Handle streaming vs non-streaming
         if request.stream:
-            # Streaming response
-            async def generate_sse():
-                async for chunk in inference_engine.generate_stream(
-                    model_wrapper=model_wrapper,
-                    messages=request.messages,
-                    params=gen_params
-                ):
-                    # Format as SSE
-                    chunk_json = chunk.model_dump_json()
-                    yield f"data: {chunk_json}\n\n"
-                
-                # Send [DONE] message
-                yield "data: [DONE]\n\n"
+            # Streaming response - proxy stream from worker
+            async def proxy_stream():
+                try:
+                    async for chunk in engine_router.proxy_streaming_request(
+                        backend=backend,
+                        endpoint="/v1/chat/completions",
+                        json_data=request_body,
+                        timeout=300.0
+                    ):
+                        yield chunk
+                except httpx.HTTPError as e:
+                    logger.error(f"Error proxying streaming request: {e}")
+                    # Send error as SSE
+                    error_data = {
+                        "error": {
+                            "message": f"Backend service error: {str(e)}",
+                            "type": "backend_error"
+                        }
+                    }
+                    yield f"data: {error_data}\n\n"
             
             return StreamingResponse(
-                generate_sse(),
+                proxy_stream(),
                 media_type="text/event-stream",
                 headers={
                     "Cache-Control": "no-cache",
@@ -149,28 +159,34 @@ async def chat_completions(request: ChatCompletionRequest):
             )
         
         else:
-            # Non-streaming response
-            response = await inference_engine.generate(
-                model_wrapper=model_wrapper,
-                messages=request.messages,
-                params=gen_params
+            # Non-streaming response - proxy to worker
+            response = await engine_router.proxy_request(
+                backend=backend,
+                endpoint="/v1/chat/completions",
+                method="POST",
+                json_data=request_body,
+                timeout=300.0
             )
             
-            logger.info(f"Generation complete for {config.model}")
+            # Check response status
+            if response.status_code != 200:
+                logger.error(f"Worker returned error: {response.status_code} - {response.text}")
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"Backend service error: {response.text}"
+                )
             
-            return response
+            logger.info(f"Generation complete for {request.model}")
+            
+            return response.json()
         
-    except FileNotFoundError as e:
-        logger.error(f"Model not found: {e}")
-        raise HTTPException(status_code=404, detail=str(e))
+    except httpx.HTTPError as e:
+        logger.error(f"HTTP error communicating with backend: {e}")
+        raise HTTPException(status_code=502, detail=f"Backend service error: {str(e)}")
     
     except ValueError as e:
         logger.error(f"Invalid request: {e}")
         raise HTTPException(status_code=400, detail=str(e))
-    
-    except RuntimeError as e:
-        logger.error(f"Model loading failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
     
     except Exception as e:
         logger.error(f"Unexpected error: {e}", exc_info=True)
@@ -180,74 +196,166 @@ async def chat_completions(request: ChatCompletionRequest):
 @app.get("/v1/models/loaded", response_model=LoadedModelsResponse)
 async def list_loaded_models():
     """
-    List currently loaded models with TTL information
+    List currently loaded models across all engine workers
+    Aggregates loaded models from all backend services
     """
-    loaded = model_cache.get_loaded_models()
+    all_loaded_models = []
+    
+    # Query each engine for loaded models
+    for backend in [request.backend.VLLM, request.backend.TRANSFORMERS, request.backend.LLAMACPP]:
+        try:
+            response = await engine_router.proxy_request(
+                backend=backend,
+                endpoint="/health",
+                method="GET",
+                timeout=5.0
+            )
+            
+            if response.status_code == 200:
+                health_data = response.json()
+                models = health_data.get("models", [])
+                
+                # Convert to CachedModel format (simplified)
+                for model_path in models:
+                    from models import CachedModel
+                    from datetime import datetime
+                    all_loaded_models.append(CachedModel(
+                        cache_key=f"{model_path}:{backend.value}",
+                        model_path=model_path,
+                        backend=backend,
+                        device="cuda",
+                        gpu_memory_utilization=0.7,
+                        loaded_at=datetime.now(),
+                        last_used=datetime.now(),
+                        expires_at=None,
+                        ttl=0
+                    ))
+        except Exception as e:
+            logger.error(f"Error querying {backend.value} for loaded models: {e}")
     
     return LoadedModelsResponse(
-        loaded_models=loaded,
-        total_count=len(loaded)
+        loaded_models=all_loaded_models,
+        total_count=len(all_loaded_models)
     )
 
 
 @app.post("/v1/models/unload")
 async def unload_model(request: UnloadModelRequest):
     """
-    Manually unload a specific model or all models with a given path
+    Manually unload a specific model from backend workers
     
     Request body:
     - model: Model path to unload
     - backend: Optional backend filter
     - device: Optional device filter
     """
-    if request.backend and request.device:
-        # Unload specific configuration
-        config = ModelConfig(
-            model=request.model,
-            backend=request.backend,
-            device=request.device
-        )
-        cache_key = config.generate_cache_key()
-        
-        success = model_cache.unload_model(cache_key)
-        
-        if success:
-            return {"status": "unloaded", "cache_key": cache_key}
-        else:
-            raise HTTPException(status_code=404, detail=f"Model not found: {cache_key}")
-    
-    else:
-        # Unload all configurations of this model
-        count = model_cache.unload_by_path(request.model)
-        
-        return {
-            "status": "unloaded",
-            "model_path": request.model,
-            "count": count
+    try:
+        unload_request = {
+            "model_path": request.model
         }
+        
+        if request.backend:
+            # Unload from specific backend
+            response = await engine_router.proxy_request(
+                backend=request.backend,
+                endpoint="/v1/models/unload",
+                method="POST",
+                json_data=unload_request,
+                timeout=30.0
+            )
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                raise HTTPException(status_code=response.status_code, detail=response.text)
+        else:
+            # Unload from all backends
+            results = []
+            for backend in [request.backend.VLLM, request.backend.TRANSFORMERS, request.backend.LLAMACPP]:
+                try:
+                    response = await engine_router.proxy_request(
+                        backend=backend,
+                        endpoint="/v1/models/unload",
+                        method="POST",
+                        json_data=unload_request,
+                        timeout=30.0
+                    )
+                    if response.status_code == 200:
+                        results.append({"backend": backend.value, "status": "unloaded"})
+                except Exception as e:
+                    logger.warning(f"Failed to unload from {backend.value}: {e}")
+            
+            return {
+                "status": "unloaded",
+                "model_path": request.model,
+                "results": results,
+                "count": len(results)
+            }
+    
+    except Exception as e:
+        logger.error(f"Error unloading model: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/v1/models/unload-all")
 async def unload_all_models():
     """
-    Unload all currently loaded models
+    Unload all currently loaded models from all backend workers
     """
-    count = model_cache.unload_all()
+    total_count = 0
+    results = []
+    
+    # Unload from all backends
+    from models import BackendType
+    for backend in [BackendType.VLLM, BackendType.TRANSFORMERS, BackendType.LLAMACPP]:
+        try:
+            # Note: Workers don't have an unload-all endpoint, so we skip this
+            # Could be implemented by querying health for models and unloading each
+            logger.info(f"Skipping unload-all for {backend.value} (not implemented in workers)")
+        except Exception as e:
+            logger.warning(f"Failed to unload all from {backend.value}: {e}")
     
     return {
-        "status": "unloaded_all",
-        "count": count
+        "status": "unload_all_not_implemented",
+        "message": "Individual model unloading is supported via /v1/models/unload endpoint",
+        "count": total_count
     }
 
 
 @app.get("/v1/models/stats", response_model=ModelStatsResponse)
 async def model_stats():
     """
-    Get cache statistics and memory usage information
+    Get aggregated statistics from all backend workers
     """
-    stats = model_cache.get_stats()
+    # Aggregate stats from all engines
+    total_models = 0
     
-    return ModelStatsResponse(**stats)
+    from models import BackendType
+    for backend in [BackendType.VLLM, BackendType.TRANSFORMERS, BackendType.LLAMACPP]:
+        try:
+            response = await engine_router.proxy_request(
+                backend=backend,
+                endpoint="/health",
+                method="GET",
+                timeout=5.0
+            )
+            
+            if response.status_code == 200:
+                health_data = response.json()
+                total_models += health_data.get("loaded_models", 0)
+        except Exception as e:
+            logger.error(f"Error getting stats from {backend.value}: {e}")
+    
+    return ModelStatsResponse(
+        total_models_loaded=total_models,
+        active_models=total_models,
+        total_requests_served=0,  # Not tracked in microservices mode
+        cache_hits=0,
+        cache_misses=0,
+        hit_rate=0.0,
+        estimated_gpu_memory_mb=None,
+        estimated_cpu_memory_mb=None
+    )
 
 
 @app.get("/v1/models/inventory", response_model=ModelInventoryResponse)
