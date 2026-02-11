@@ -123,21 +123,18 @@ async def load_model_if_needed(
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
         
-        # Load model
+        # Load model without device_map (no accelerate dependency)
         model_kwargs = {
             "local_files_only": True,
             "trust_remote_code": True,
-            "low_cpu_mem_usage": True
+            "low_cpu_mem_usage": True,
+            "torch_dtype": dtype
         }
         
-        if device == "cuda":
-            model_kwargs["device_map"] = "auto"
-            model_kwargs["torch_dtype"] = dtype
-        else:
-            model_kwargs["device_map"] = "cpu"
-            model_kwargs["torch_dtype"] = torch.float32
-        
         model = AutoModelForCausalLM.from_pretrained(model_path, **model_kwargs)
+        
+        # Move model to target device
+        model = model.to(device)
         
         # Store in cache
         loaded_models[model_path] = {
@@ -321,7 +318,7 @@ async def chat_completions(request: ChatCompletionRequest):
         if device == "cuda":
             inputs = {k: v.cuda() for k, v in inputs.items()}
         
-        prompt_tokens = inputs.input_ids.shape[1]
+        prompt_tokens = inputs["input_ids"].shape[1]
         
         if request.stream:
             # Streaming response
@@ -351,7 +348,7 @@ async def chat_completions(request: ChatCompletionRequest):
                 
                 # Generation config
                 generation_kwargs = {
-                    "input_ids": inputs.input_ids,
+                    "input_ids": inputs["input_ids"],
                     "max_new_tokens": request.max_tokens,
                     "temperature": request.temperature if request.temperature > 0 else 1.0,
                     "top_p": request.top_p,
@@ -415,7 +412,7 @@ async def chat_completions(request: ChatCompletionRequest):
             # Non-streaming response
             with torch.no_grad():
                 outputs = model.generate(
-                    inputs.input_ids,
+                    inputs["input_ids"],
                     max_new_tokens=request.max_tokens,
                     temperature=request.temperature if request.temperature > 0 else 1.0,
                     top_p=request.top_p,

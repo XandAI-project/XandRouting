@@ -25,7 +25,7 @@ model_metadata: Dict[str, Dict[str, Any]] = {}
 class LoadModelRequest(BaseModel):
     """Request to load a model"""
     model_path: str = Field(..., description="Path to model directory")
-    gpu_memory_utilization: float = Field(default=0.7, ge=0.1, le=1.0)
+    gpu_memory_utilization: float = Field(default=0.4, ge=0.1, le=1.0)
     max_model_len: Optional[int] = Field(default=None, description="Maximum context length")
     ttl: int = Field(default=300, ge=0, description="Time-to-live in seconds")
 
@@ -53,7 +53,7 @@ class ChatCompletionRequest(BaseModel):
     presence_penalty: Optional[float] = Field(default=0.0, ge=-2.0, le=2.0)
     frequency_penalty: Optional[float] = Field(default=0.0, ge=-2.0, le=2.0)
     # vLLM-specific parameters (optional)
-    gpu_memory_utilization: Optional[float] = Field(default=0.7, ge=0.1, le=1.0)
+    gpu_memory_utilization: Optional[float] = Field(default=0.4, ge=0.1, le=1.0)
     max_model_len: Optional[int] = None
     ttl: Optional[int] = Field(default=300, ge=0)
 
@@ -79,7 +79,7 @@ def messages_to_prompt(messages: List[Dict[str, str]]) -> str:
 
 async def load_model_if_needed(
     model_path: str,
-    gpu_memory_utilization: float = 0.7,
+    gpu_memory_utilization: float = 0.4,
     max_model_len: Optional[int] = None,
     ttl: int = 300
 ) -> Any:
@@ -90,10 +90,14 @@ async def load_model_if_needed(
         model_metadata[model_path]["last_used"] = datetime.now()
         return loaded_models[model_path]
     
+    # Apply safe defaults for 16GB VRAM if not specified by user
+    if max_model_len is None:
+        max_model_len = 8192
+        logger.warning(f"max_model_len not specified, using safe default: {max_model_len} (recommended for 16GB VRAM)")
+    
     logger.info(f"Loading model with vLLM: {model_path}")
     logger.info(f"GPU memory utilization: {gpu_memory_utilization}")
-    if max_model_len:
-        logger.info(f"Max model length: {max_model_len}")
+    logger.info(f"Max model length: {max_model_len}")
     
     try:
         from vllm import LLM
@@ -102,11 +106,9 @@ async def load_model_if_needed(
         llm_kwargs = {
             "model": model_path,
             "gpu_memory_utilization": gpu_memory_utilization,
+            "max_model_len": max_model_len,
             "trust_remote_code": True,
         }
-        
-        if max_model_len:
-            llm_kwargs["max_model_len"] = max_model_len
         
         llm = LLM(**llm_kwargs)
         
@@ -251,7 +253,7 @@ async def chat_completions(request: ChatCompletionRequest):
         # Load model if needed
         llm = await load_model_if_needed(
             model_path=request.model,
-            gpu_memory_utilization=request.gpu_memory_utilization or 0.7,
+            gpu_memory_utilization=request.gpu_memory_utilization or 0.4,
             max_model_len=request.max_model_len,
             ttl=request.ttl or 300
         )
