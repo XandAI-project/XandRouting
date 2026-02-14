@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "dynamic-llm-api-001",
 		"name": "Dynamic LLM API",
-		"description": "Complete API collection for Dynamic Multi-Model LLM Inference API\n\nFeatures:\n- Dynamic model loading (vLLM, Transformers, llama.cpp)\n- TTL-based caching\n- Exclusive mode\n- OpenAI-compatible endpoints",
+		"description": "Complete API collection for Dynamic Multi-Model LLM Inference API\n\nFeatures:\n- Dynamic model loading (vLLM, Transformers, llama.cpp)\n- TTL-based caching\n- Exclusive mode\n- OpenAI-compatible endpoints\n- Optimized defaults for 16GB VRAM\n- Sequential backend testing\n\nVersion: 2.0 (Updated with optimized memory settings)",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -61,7 +61,7 @@
 			"name": "Chat Completions",
 			"item": [
 				{
-					"name": "vLLM - CUDA (GPU Full)",
+					"name": "vLLM - CUDA (Optimized for 16GB VRAM)",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -72,7 +72,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"model\": \"/models/your-model\",\n  \"backend\": \"vllm\",\n  \"device\": \"cuda\",\n  \"gpu_memory_utilization\": 0.9,\n  \"ttl\": 600,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a helpful AI assistant.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Explain quantum computing in simple terms.\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 200\n}"
+							"raw": "{\n  \"model\": \"/models/qwen3-coder-30b\",\n  \"backend\": \"vllm\",\n  \"device\": \"cuda\",\n  \"gpu_memory_utilization\": 0.4,\n  \"max_model_len\": 8192,\n  \"ttl\": 600,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a helpful AI assistant.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Explain quantum computing in simple terms.\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 200\n}"
 						},
 						"url": {
 							"raw": "http://192.168.0.5:8080/v1/chat/completions",
@@ -90,12 +90,12 @@
 								"completions"
 							]
 						},
-						"description": "Run model with vLLM backend on full GPU (0.9 utilization)"
+						"description": "Run model with vLLM backend optimized for 16GB VRAM (0.4 utilization, 8K context)"
 					},
 					"response": []
 				},
 				{
-					"name": "vLLM - CUDA (RAM Offload)",
+					"name": "vLLM - CUDA (High Memory Usage)",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -106,7 +106,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"model\": \"/models/your-model\",\n  \"backend\": \"vllm\",\n  \"device\": \"cuda\",\n  \"gpu_memory_utilization\": 0.5,\n  \"ttl\": 600,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Write a Python function to calculate fibonacci numbers.\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 300\n}"
+							"raw": "{\n  \"model\": \"/models/qwen3-coder-30b\",\n  \"backend\": \"vllm\",\n  \"device\": \"cuda\",\n  \"gpu_memory_utilization\": 0.8,\n  \"max_model_len\": 16384,\n  \"ttl\": 600,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Write a Python function to calculate fibonacci numbers.\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 300\n}"
 						},
 						"url": {
 							"raw": "http://192.168.0.5:8080/v1/chat/completions",
@@ -124,7 +124,7 @@
 								"completions"
 							]
 						},
-						"description": "Run with vLLM using 50% GPU, 50% RAM offload (for large models)"
+						"description": "Run with vLLM using higher memory (0.8 utilization, 16K context) - for systems with more VRAM"
 					},
 					"response": []
 				},
@@ -140,7 +140,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"model\": \"/models/your-model\",\n  \"backend\": \"transformers\",\n  \"device\": \"cuda\",\n  \"ttl\": 300,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"What is machine learning?\"\n    }\n  ],\n  \"temperature\": 0.8,\n  \"max_tokens\": 150\n}"
+							"raw": "{\n  \"model\": \"/models/qwen3-coder-30b\",\n  \"backend\": \"transformers\",\n  \"device\": \"cuda\",\n  \"ttl\": 300,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"What is machine learning?\"\n    }\n  ],\n  \"temperature\": 0.8,\n  \"max_tokens\": 150\n}"
 						},
 						"url": {
 							"raw": "http://192.168.0.5:8080/v1/chat/completions",
@@ -158,7 +158,7 @@
 								"completions"
 							]
 						},
-						"description": "Run with Transformers backend on GPU"
+						"description": "Run with Transformers backend on GPU (supports Blackwell RTX 5060 Ti with PyTorch nightly)"
 					},
 					"response": []
 				},
@@ -231,7 +231,7 @@
 					"response": []
 				},
 				{
-					"name": "llama.cpp - GGUF (Partial GPU)",
+					"name": "llama.cpp - GGUF (Partial GPU - 16GB VRAM)",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -242,7 +242,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"model\": \"/models/qwen3-gguf/model.gguf\",\n  \"backend\": \"llamacpp\",\n  \"device\": \"cuda\",\n  \"n_gpu_layers\": 32,\n  \"n_ctx\": 2048,\n  \"ttl\": 600,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Explain recursion.\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 200\n}"
+							"raw": "{\n  \"model\": \"/models/qwen3-iq4xs/Qwen3-Coder-30B-A3B-Instruct-IQ4_XS.gguf\",\n  \"backend\": \"llamacpp\",\n  \"device\": \"cuda\",\n  \"n_gpu_layers\": 20,\n  \"n_ctx\": 4096,\n  \"ttl\": 600,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Explain recursion.\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 200\n}"
 						},
 						"url": {
 							"raw": "http://192.168.0.5:8080/v1/chat/completions",
@@ -260,7 +260,7 @@
 								"completions"
 							]
 						},
-						"description": "Run GGUF with partial GPU offload (32 layers on GPU, rest on CPU)"
+						"description": "Run 30B GGUF model with partial GPU offload (20 layers for 16GB VRAM, 4K context)"
 					},
 					"response": []
 				},
@@ -344,7 +344,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"model\": \"/models/your-model\",\n  \"backend\": \"vllm\",\n  \"device\": \"cuda\",\n  \"gpu_memory_utilization\": 0.7,\n  \"ttl\": 600,\n  \"stream\": true,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Write a short story about a robot.\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 500\n}"
+							"raw": "{\n  \"model\": \"/models/qwen3-coder-30b\",\n  \"backend\": \"vllm\",\n  \"device\": \"cuda\",\n  \"gpu_memory_utilization\": 0.4,\n  \"max_model_len\": 8192,\n  \"ttl\": 600,\n  \"stream\": true,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Write a short story about a robot.\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 500\n}"
 						},
 						"url": {
 							"raw": "http://192.168.0.5:8080/v1/chat/completions",
@@ -362,7 +362,7 @@
 								"completions"
 							]
 						},
-						"description": "Streaming example with vLLM backend - tokens stream as they are generated"
+						"description": "Streaming example with vLLM backend - tokens stream as they are generated (optimized for 16GB VRAM)"
 					},
 					"response": []
 				},
@@ -378,7 +378,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"model\": \"/models/your-model\",\n  \"backend\": \"transformers\",\n  \"device\": \"cuda\",\n  \"ttl\": 300,\n  \"stream\": true,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Explain how neural networks work in detail.\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 800\n}"
+							"raw": "{\n  \"model\": \"/models/qwen3-coder-30b\",\n  \"backend\": \"transformers\",\n  \"device\": \"cuda\",\n  \"ttl\": 300,\n  \"stream\": true,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Explain how neural networks work in detail.\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 800\n}"
 						},
 						"url": {
 							"raw": "http://192.168.0.5:8080/v1/chat/completions",
@@ -396,7 +396,7 @@
 								"completions"
 							]
 						},
-						"description": "Streaming example with Transformers backend using TextIteratorStreamer"
+						"description": "Streaming example with Transformers backend using TextIteratorStreamer (PyTorch nightly for RTX 5060 Ti)"
 					},
 					"response": []
 				},
@@ -412,7 +412,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"model\": \"/models/qwen3-gguf/model.gguf\",\n  \"backend\": \"llamacpp\",\n  \"device\": \"cuda\",\n  \"n_gpu_layers\": -1,\n  \"n_ctx\": 4096,\n  \"ttl\": 600,\n  \"stream\": true,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Write a Python tutorial about async programming.\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 1000\n}"
+							"raw": "{\n  \"model\": \"/models/qwen3-iq4xs/Qwen3-Coder-30B-A3B-Instruct-IQ4_XS.gguf\",\n  \"backend\": \"llamacpp\",\n  \"device\": \"cuda\",\n  \"n_gpu_layers\": 20,\n  \"n_ctx\": 4096,\n  \"ttl\": 600,\n  \"stream\": true,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Write a Python tutorial about async programming.\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 1000\n}"
 						},
 						"url": {
 							"raw": "http://192.168.0.5:8080/v1/chat/completions",
@@ -430,7 +430,7 @@
 								"completions"
 							]
 						},
-						"description": "Streaming example with llama.cpp backend for GGUF models"
+						"description": "Streaming example with llama.cpp backend for GGUF models (partial GPU offload for 16GB VRAM)"
 					},
 					"response": []
 				}
@@ -515,7 +515,7 @@
 					"response": []
 				},
 				{
-					"name": "Unload Specific Model",
+					"name": "Unload Specific Model (vLLM)",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -526,7 +526,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"model\": \"/models/your-model\",\n  \"backend\": \"vllm\",\n  \"device\": \"cuda\"\n}"
+							"raw": "{\n  \"model\": \"/models/qwen3-coder-30b\",\n  \"backend\": \"vllm\"\n}"
 						},
 						"url": {
 							"raw": "http://192.168.0.5:8080/v1/models/unload",
@@ -544,12 +544,12 @@
 								"unload"
 							]
 						},
-						"description": "Manually unload a specific model configuration"
+						"description": "Manually unload a specific model from vLLM backend"
 					},
 					"response": []
 				},
 				{
-					"name": "Unload All Configs of a Model",
+					"name": "Unload All Backends for Model",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -560,7 +560,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"model\": \"/models/your-model\"\n}"
+							"raw": "{\n  \"model\": \"/models/qwen3-coder-30b\"\n}"
 						},
 						"url": {
 							"raw": "http://192.168.0.5:8080/v1/models/unload",
@@ -578,7 +578,7 @@
 								"unload"
 							]
 						},
-						"description": "Unload all configurations of a specific model"
+						"description": "Unload a model from all backends (vLLM, Transformers, llama.cpp)"
 					},
 					"response": []
 				},
@@ -895,6 +895,240 @@
 							]
 						},
 						"description": "Example for long context processing (8K context window)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Sequential Backend Testing",
+			"item": [
+				{
+					"name": "1. Test vLLM Backend",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/qwen3-coder-30b\",\n  \"backend\": \"vllm\",\n  \"device\": \"cuda\",\n  \"gpu_memory_utilization\": 0.4,\n  \"max_model_len\": 8192,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Say hello\"\n    }\n  ],\n  \"max_tokens\": 20\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/chat/completions",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"chat",
+								"completions"
+							]
+						},
+						"description": "Step 1: Test vLLM backend with optimized settings"
+					},
+					"response": []
+				},
+				{
+					"name": "2. Unload vLLM Model",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/qwen3-coder-30b\",\n  \"backend\": \"vllm\"\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/models/unload",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"models",
+								"unload"
+							]
+						},
+						"description": "Step 2: Unload vLLM model to free memory"
+					},
+					"response": []
+				},
+				{
+					"name": "3. Test Transformers Backend",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/qwen3-coder-30b\",\n  \"backend\": \"transformers\",\n  \"device\": \"cuda\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Say hello\"\n    }\n  ],\n  \"max_tokens\": 20\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/chat/completions",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"chat",
+								"completions"
+							]
+						},
+						"description": "Step 3: Test Transformers backend (supports RTX 5060 Ti)"
+					},
+					"response": []
+				},
+				{
+					"name": "4. Unload Transformers Model",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/qwen3-coder-30b\",\n  \"backend\": \"transformers\"\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/models/unload",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"models",
+								"unload"
+							]
+						},
+						"description": "Step 4: Unload Transformers model to free memory"
+					},
+					"response": []
+				},
+				{
+					"name": "5. Test llama.cpp Backend",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/qwen3-iq4xs/Qwen3-Coder-30B-A3B-Instruct-IQ4_XS.gguf\",\n  \"backend\": \"llamacpp\",\n  \"device\": \"cuda\",\n  \"n_gpu_layers\": 20,\n  \"n_ctx\": 4096,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Say hello\"\n    }\n  ],\n  \"max_tokens\": 20\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/chat/completions",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"chat",
+								"completions"
+							]
+						},
+						"description": "Step 5: Test llama.cpp backend with GGUF model"
+					},
+					"response": []
+				},
+				{
+					"name": "6. Unload llama.cpp Model",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"model\": \"/models/qwen3-iq4xs/Qwen3-Coder-30B-A3B-Instruct-IQ4_XS.gguf\",\n  \"backend\": \"llamacpp\"\n}"
+						},
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/models/unload",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"models",
+								"unload"
+							]
+						},
+						"description": "Step 6: Unload llama.cpp model to free memory"
+					},
+					"response": []
+				},
+				{
+					"name": "7. Verify All Unloaded",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://192.168.0.5:8080/v1/models/loaded",
+							"protocol": "http",
+							"host": [
+								"192",
+								"168",
+								"0",
+								"5"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"models",
+								"loaded"
+							]
+						},
+						"description": "Step 7: Verify all models are unloaded (should return empty list)"
 					},
 					"response": []
 				}
